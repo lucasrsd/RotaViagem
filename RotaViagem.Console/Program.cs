@@ -4,28 +4,59 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using RestSharp;
 using RotaViagem.Console.Domain;
 
 namespace RotaViagem.Console {
     class Program {
         static void Main (string[] args) {
 
+            while (true) Executar ();
+        }
+
+        static void Executar () {
             try {
-                var res = ExecutaHttp ("http://localhost:5000/api/v1/CalculoRota", new { Origem = "ABC", Destino = "XYZ" });
+
+                System.Console.WriteLine ("Informe a rota (exemplo GRU-CDG)");
+                var rota = System.Console.ReadLine ();
+
+                if (string.IsNullOrEmpty (rota) || !rota.Contains ('-')) {
+                    System.Console.WriteLine ("Rota inválida!");
+                    return;
+                }
+
+                var origem = rota.Split ('-') [0];
+                var destino = rota.Split ('-') [1];
+
+                var httpRota = ExecutaHttp ("http://localhost:5000/api/v1/CalculoRota", new { Origem = origem, Destino = destino }).Result;
+
+                var result = JsonConvert.DeserializeObject<Result> (httpRota.Content);
+
+                if (string.IsNullOrEmpty (result.Erro)) {
+                    System.Console.WriteLine ($"Melhor rota: {result.MelhorRota}");
+                } else {
+                    System.Console.WriteLine ($"Ocorreu um erro ao calcular: {result.Erro}");
+                }
+
             } catch (Exception ex) {
-                var erro = ex;
+                System.Console.WriteLine ($"Algo deu errado! Erro: {ex.Message}");
             }
         }
 
-        static Result ExecutaHttp (string url, object content) {
-            using (var httpClientHandler = new HttpClientHandler ()) {
-                httpClientHandler.ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => { return true; };
-                using (var client = new HttpClient (httpClientHandler)) {
-                    client.DefaultRequestHeaders.Accept.Add (new MediaTypeWithQualityHeaderValue ("application/json"));
-                    var res = client.PostAsync (url, new StringContent (content.ToString (), Encoding.UTF32, "application/json")).Result;
-                    return JsonConvert.DeserializeObject<Result> (res.Content.ToString ());
-                }
-            }
+        static Task<RestResponse> ExecutaHttp (string url, object content) {
+            var client = new RestClient (url);
+            client.RemoteCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => true;
+            var request = new RestRequest (Method.POST);
+            request.AddJsonBody (content);
+            return client.ExecuteAsync (request);
+        }
+    }
+
+    public static class RestClientExtensions {
+        public static async Task<RestResponse> ExecuteAsync (this RestClient client, RestRequest request) {
+            TaskCompletionSource<IRestResponse> taskCompletion = new TaskCompletionSource<IRestResponse> ();
+            RestRequestAsyncHandle handle = client.ExecuteAsync (request, r => taskCompletion.SetResult (r));
+            return (RestResponse) (await taskCompletion.Task);
         }
     }
 }

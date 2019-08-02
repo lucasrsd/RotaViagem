@@ -1,0 +1,1 @@
+dotnet run "C:\\Users\\Usuario\\Documents\\Projetos e Testes Tecnicos\\RotaViagem\\Csv\\input-routes.csv"
