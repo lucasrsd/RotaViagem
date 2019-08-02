@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using RestSharp;
 using RotaViagem.Console.Domain;
+using RotaViagem.Console.Extension;
 
 namespace RotaViagem.Console {
     class Program {
@@ -49,14 +50,6 @@ namespace RotaViagem.Console {
             var request = new RestRequest (Method.POST);
             request.AddJsonBody (content);
             return client.ExecuteAsync (request);
-        }
-    }
-
-    public static class RestClientExtensions {
-        public static async Task<RestResponse> ExecuteAsync (this RestClient client, RestRequest request) {
-            TaskCompletionSource<IRestResponse> taskCompletion = new TaskCompletionSource<IRestResponse> ();
-            RestRequestAsyncHandle handle = client.ExecuteAsync (request, r => taskCompletion.SetResult (r));
-            return (RestResponse) (await taskCompletion.Task);
         }
     }
 }
