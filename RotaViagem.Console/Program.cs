@@ -1,8 +1,7 @@
 ﻿using System;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Text;
+using System.IO;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using RestSharp;
 using RotaViagem.Console.Domain;
@@ -10,12 +9,23 @@ using RotaViagem.Console.Extension;
 
 namespace RotaViagem.Console {
     class Program {
-        static void Main (string[] args) {
 
-            while (true) Executar ();
+        static IConfiguration BuildConfiguration () {
+            var builder = new ConfigurationBuilder ()
+                .SetBasePath (Directory.GetCurrentDirectory ())
+                .AddJsonFile ($"appsettings.json", true, true);
+            return builder.Build ();
         }
 
-        static void Executar () {
+        static void Main (string[] args) {
+
+            var config = BuildConfiguration ();
+            var baseUrl = config["BaseUrl"];
+
+            while (true) Executar (baseUrl);
+        }
+
+        static void Executar (string baseUrl) {
             try {
 
                 System.Console.WriteLine ("Informe a rota (exemplo GRU-CDG)");
@@ -29,7 +39,7 @@ namespace RotaViagem.Console {
                 var origem = rota.Split ('-') [0];
                 var destino = rota.Split ('-') [1];
 
-                var httpRota = ExecutaHttp ("http://localhost:5000/api/v1/CalculoRota", new { Origem = origem, Destino = destino }).Result;
+                var httpRota = ExecutaHttp ($"{baseUrl}/v1/CalculoRota", new { Origem = origem, Destino = destino }).Result;
 
                 var result = JsonConvert.DeserializeObject<Result> (httpRota.Content);
 
